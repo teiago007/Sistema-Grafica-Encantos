@@ -99,7 +99,7 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-primary p-4">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-3xl font-bold text-center">Gráfica Manager</CardTitle>
+          <CardTitle className="text-3xl font-bold text-center">Gráfica e Encantos</CardTitle>
           <CardDescription className="text-center">
             Sistema de Gestão Financeira
           </CardDescription>

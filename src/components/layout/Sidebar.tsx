@@ -40,7 +40,7 @@ export default function Sidebar() {
     <aside className="fixed left-0 top-0 h-full w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
       <div className="p-6 border-b border-sidebar-border">
         <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-          Gráfica Manager
+          Gráfica e Encantos
         </h1>
         <p className="text-sm text-sidebar-foreground/60 mt-1">Gestão Financeira</p>
       </div>
