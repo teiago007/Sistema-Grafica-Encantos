@@ -1,74 +1,126 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import MainLayout from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowUpRight, ArrowDownRight, TrendingUp, DollarSign } from "lucide-react";
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Button } from "@/components/ui/button";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from "recharts";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Download, ArrowUpRight, ArrowDownRight, TrendingUp } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
-interface Transaction {
+interface Order {
   id: string;
-  type: "income" | "expense";
   amount: number;
-  date: string;
+  received_date: string;
+  status: string;
+  paid: boolean;
 }
 
 export default function Dashboard() {
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpense, setTotalExpense] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        navigate("/auth");
-        return;
-      }
+    checkUser();
+    loadOrders();
+  }, []);
 
-      const { data, error } = await supabase
-        .from("transactions")
-        .select("id, type, amount, date")
-        .order("date", { ascending: true });
+  const checkUser = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      navigate("/auth");
+    }
+  };
 
-      if (!error && data) {
-        setTransactions(data);
-        
-        const income = data
-          .filter((t) => t.type === "income")
-          .reduce((sum, t) => sum + Number(t.amount), 0);
-        
-        const expense = data
-          .filter((t) => t.type === "expense")
-          .reduce((sum, t) => sum + Number(t.amount), 0);
+  const loadOrders = async () => {
+    const { data, error } = await supabase
+      .from("orders")
+      .select("*")
+      .order("received_date", { ascending: true });
 
-        setTotalIncome(income);
-        setTotalExpense(expense);
-      }
+    if (error) {
+      toast.error("Erro ao carregar dados");
+      console.error(error);
+    } else {
+      setOrders(data || []);
+      
+      // Calculate totals based on paid orders
+      const income = data
+        ?.filter((order) => order.paid)
+        .reduce((sum, order) => sum + parseFloat(order.amount.toString()), 0) || 0;
+      
+      // For now, expenses are orders that are not paid yet (could be adjusted)
+      const expense = data
+        ?.filter((order) => !order.paid)
+        .reduce((sum, order) => sum + parseFloat(order.amount.toString()), 0) || 0;
 
-      setLoading(false);
-    };
+      setTotalIncome(income);
+      setTotalExpense(expense);
+    }
+    setLoading(false);
+  };
 
-    checkAuth();
-  }, [navigate]);
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    
+    doc.setFontSize(18);
+    doc.text("Relatório Financeiro - Gráfica e Encantos", 14, 20);
+    
+    doc.setFontSize(12);
+    doc.text(`Data: ${new Date().toLocaleDateString()}`, 14, 30);
+    
+    doc.setFontSize(14);
+    doc.text("Resumo Financeiro", 14, 45);
+    
+    doc.setFontSize(12);
+    doc.text(`Total de Receitas (Pagas): R$ ${totalIncome.toFixed(2)}`, 14, 55);
+    doc.text(`Total de Despesas (Pendentes): R$ ${totalExpense.toFixed(2)}`, 14, 65);
+    doc.text(`Lucro Líquido: R$ ${(totalIncome - totalExpense).toFixed(2)}`, 14, 75);
+    
+    // Prepare data for table
+    const tableData = orders.map(order => [
+      new Date(order.received_date).toLocaleDateString(),
+      order.status,
+      order.paid ? "Pago" : "Pendente",
+      `R$ ${parseFloat(order.amount.toString()).toFixed(2)}`
+    ]);
+    
+    autoTable(doc, {
+      startY: 85,
+      head: [['Data', 'Status', 'Pagamento', 'Valor']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [219, 112, 147] },
+    });
+    
+    doc.save(`relatorio-financeiro-${new Date().toISOString().split('T')[0]}.pdf`);
+    toast.success("Relatório exportado com sucesso!");
+  };
 
-  const chartData = transactions.reduce((acc: any[], transaction) => {
-    const date = new Date(transaction.date).toLocaleDateString("pt-BR", { month: "short" });
-    const existing = acc.find((item) => item.month === date);
+  const chartData = orders.reduce((acc: any[], order) => {
+    const month = new Date(order.received_date).toLocaleDateString("pt-BR", {
+      month: "short",
+      year: "numeric",
+    });
 
+    const existing = acc.find((item) => item.month === month);
+    
     if (existing) {
-      if (transaction.type === "income") {
-        existing.receitas += Number(transaction.amount);
+      if (order.paid) {
+        existing.receitas += parseFloat(order.amount.toString());
       } else {
-        existing.despesas += Number(transaction.amount);
+        existing.despesas += parseFloat(order.amount.toString());
       }
     } else {
       acc.push({
-        month: date,
-        receitas: transaction.type === "income" ? Number(transaction.amount) : 0,
-        despesas: transaction.type === "expense" ? Number(transaction.amount) : 0,
+        month,
+        receitas: order.paid ? parseFloat(order.amount.toString()) : 0,
+        despesas: !order.paid ? parseFloat(order.amount.toString()) : 0,
       });
     }
 
@@ -81,7 +133,7 @@ export default function Dashboard() {
     return (
       <MainLayout>
         <div className="flex items-center justify-center h-full">
-          <p className="text-muted-foreground">Carregando...</p>
+          <p>Carregando...</p>
         </div>
       </MainLayout>
     );
@@ -90,9 +142,15 @@ export default function Dashboard() {
   return (
     <MainLayout>
       <div className="space-y-8">
-        <div>
-          <h1 className="text-4xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground mt-2">Visão geral do seu negócio</p>
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-4xl font-bold">Dashboard</h1>
+            <p className="text-muted-foreground mt-2">Visão geral do seu negócio</p>
+          </div>
+          <Button onClick={exportToPDF} variant="outline">
+            <Download className="w-4 h-4 mr-2" />
+            Exportar Relatório PDF
+          </Button>
         </div>
 
         <div className="grid gap-6 md:grid-cols-3">
@@ -107,6 +165,9 @@ export default function Dashboard() {
               <div className="text-3xl font-bold text-success">
                 R$ {totalIncome.toFixed(2)}
               </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Encomendas pagas
+              </p>
             </CardContent>
           </Card>
 
@@ -121,6 +182,9 @@ export default function Dashboard() {
               <div className="text-3xl font-bold text-destructive">
                 R$ {totalExpense.toFixed(2)}
               </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Encomendas pendentes
+              </p>
             </CardContent>
           </Card>
 
@@ -135,6 +199,9 @@ export default function Dashboard() {
               <div className="text-3xl font-bold text-primary-foreground">
                 R$ {profit.toFixed(2)}
               </div>
+              <p className="text-xs text-primary-foreground/80 mt-1">
+                Receitas - Despesas
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -142,10 +209,7 @@ export default function Dashboard() {
         <div className="grid gap-6 md:grid-cols-2">
           <Card className="shadow-lg">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5" />
-                Receitas vs Despesas
-              </CardTitle>
+              <CardTitle>Receitas vs Despesas</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -161,8 +225,8 @@ export default function Dashboard() {
                     }}
                   />
                   <Legend />
-                  <Bar dataKey="receitas" fill="hsl(var(--success))" radius={[8, 8, 0, 0]} />
-                  <Bar dataKey="despesas" fill="hsl(var(--destructive))" radius={[8, 8, 0, 0]} />
+                  <Bar dataKey="receitas" fill="hsl(var(--success))" radius={[8, 8, 0, 0]} name="Receitas" />
+                  <Bar dataKey="despesas" fill="hsl(var(--destructive))" radius={[8, 8, 0, 0]} name="Despesas" />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
@@ -170,10 +234,7 @@ export default function Dashboard() {
 
           <Card className="shadow-lg">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
-                Evolução do Lucro
-              </CardTitle>
+              <CardTitle>Evolução do Lucro</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -194,6 +255,7 @@ export default function Dashboard() {
                     stroke="hsl(var(--accent))"
                     fill="hsl(var(--accent))"
                     fillOpacity={0.3}
+                    name="Lucro"
                   />
                 </AreaChart>
               </ResponsiveContainer>

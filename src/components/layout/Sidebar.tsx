@@ -1,8 +1,9 @@
-import { LayoutDashboard, FileText, DollarSign, LogOut } from "lucide-react";
+import { LayoutDashboard, FileText, ShoppingCart, LogOut } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import logo from "@/assets/logo.png";
 
 const menuItems = [
   {
@@ -16,9 +17,9 @@ const menuItems = [
     path: "/services",
   },
   {
-    title: "Transações",
-    icon: DollarSign,
-    path: "/transactions",
+    title: "Encomendas",
+    icon: ShoppingCart,
+    path: "/orders",
   },
 ];
 
@@ -38,11 +39,9 @@ export default function Sidebar() {
 
   return (
     <aside className="fixed left-0 top-0 h-full w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
-      <div className="p-6 border-b border-sidebar-border">
-        <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-          Gráfica e Encantos
-        </h1>
-        <p className="text-sm text-sidebar-foreground/60 mt-1">Gestão Financeira</p>
+      <div className="p-6 border-b border-sidebar-border flex flex-col items-center">
+        <img src={logo} alt="Gráfica e Encantos" className="w-40 h-auto mb-2" />
+        <p className="text-sm text-sidebar-foreground/60">Gestão Financeira</p>
       </div>
 
       <nav className="flex-1 p-4 space-y-2">

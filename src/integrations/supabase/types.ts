@@ -14,6 +14,59 @@ export type Database = {
   }
   public: {
     Tables: {
+      orders: {
+        Row: {
+          amount: number
+          created_at: string
+          customer_name: string
+          delivery_date: string
+          id: string
+          order_name: string
+          paid: boolean
+          received_date: string
+          service_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          customer_name: string
+          delivery_date: string
+          id?: string
+          order_name: string
+          paid?: boolean
+          received_date?: string
+          service_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          customer_name?: string
+          delivery_date?: string
+          id?: string
+          order_name?: string
+          paid?: boolean
+          received_date?: string
+          service_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -69,57 +122,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "services_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      transactions: {
-        Row: {
-          amount: number
-          created_at: string
-          date: string
-          description: string
-          id: string
-          service_id: string | null
-          type: Database["public"]["Enums"]["transaction_type"]
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          amount: number
-          created_at?: string
-          date?: string
-          description: string
-          id?: string
-          service_id?: string | null
-          type: Database["public"]["Enums"]["transaction_type"]
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          date?: string
-          description?: string
-          id?: string
-          service_id?: string | null
-          type?: Database["public"]["Enums"]["transaction_type"]
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "transactions_service_id_fkey"
-            columns: ["service_id"]
-            isOneToOne: false
-            referencedRelation: "services"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "transactions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
