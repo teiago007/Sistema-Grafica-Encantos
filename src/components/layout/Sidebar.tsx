@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileText, ShoppingCart, LogOut } from "lucide-react";
+import { LayoutDashboard, FileText, ShoppingCart, Users, LogOut } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,6 +20,11 @@ const menuItems = [
     title: "Encomendas",
     icon: ShoppingCart,
     path: "/orders",
+  },
+  {
+    title: "Usuários",
+    icon: Users,
+    path: "/users",
   },
 ];
 
